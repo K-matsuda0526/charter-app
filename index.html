@@ -1235,8 +1235,58 @@
 
         // 印刷
         function handlePrint() {
-            // 印刷前に最低限の入力チェックだけ行う（必須ではないが親切）
-            window.print();
+            const data = getFormData();
+            if(!data) return;
+            
+            renderPdfTemplate(data);
+
+            const pdfEl = document.getElementById('pdfTemplate');
+            
+            // 印刷用の新しいウィンドウを開く
+            const printWin = window.open('', '_blank', 'width=1200,height=800');
+            if(!printWin) {
+                showAlert("ポップアップがブロックされました。ブラウザの設定で許可してください。");
+                return;
+            }
+
+            // 現在の画面のスタイルシートをすべて取得
+            let styles = '';
+            document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
+                styles += el.outerHTML;
+            });
+
+            // 印刷用HTMLを構築
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ja">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>印刷 - チャーター便依頼書</title>
+                    ${styles}
+                    <style>
+                        /* 印刷専用のスタイル調整 */
+                        @media print {
+                            @page { size: A4 landscape; margin: 0; }
+                            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; background: white; }
+                            #pdfTemplate { width: 1122px; height: 793px; display: block !important; margin: 0 auto; transform-origin: top left; }
+                        }
+                        /* プレビュー画面用のスタイル */
+                        body { background: #f3f4f6; display: flex; justify-content: center; padding: 20px; }
+                        #pdfTemplate { display: block !important; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+                    </style>
+                </head>
+                <body>
+                    ${pdfEl.outerHTML}
+                    <script>
+                        setTimeout(() => {
+                            document.getElementById('pdfTemplate').classList.remove('hidden');
+                            window.print();
+                        }, 800);
+                    </script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
         }
 
         // QRコード表示

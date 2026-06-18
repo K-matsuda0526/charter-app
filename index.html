@@ -1224,7 +1224,7 @@
         window.addEventListener('beforeprint', () => {
             const data = getFormData(true);
             if (data) {
-                renderPdfTemplate(data);
+                updatePdfDOM(data);
             }
         });
 

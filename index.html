@@ -1253,47 +1253,96 @@
         }
 
         // QRコード表示
-        function handleQR() {
+        async function handleQR() {
             const data = getFormData();
             if (!data) return;
 
-            // テキスト作成
-            const textData = `【チャーター便依頼】
-依頼: ${data.company}
-
-[積地]
-${formatLocationText(data.loadingPlaces)}
-
-[卸地]
-${formatLocationText(data.unloadingPlaces)}
-
-内容: ${data.cargoContent}
-重量: ${data.cargoWeight}kg`;
-
-            const canvas = document.getElementById('qrcodeCanvas');
-            
             if (typeof QRCode === 'undefined') {
                 showAlert('QRコードライブラリの読み込みを待っています。もう一度お試しください。');
                 return;
             }
 
-            QRCode.toCanvas(canvas, textData, {
-                width: 220,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
+            // モーダルやローディングを表示
+            document.getElementById('overlay').classList.remove('hidden');
+            document.getElementById('spinner').classList.remove('hidden');
+            document.getElementById('spinnerText').innerText = 'PDFを生成してQRコードを準備中...';
+
+            try {
+                // 1. PDFを生成する
+                updatePdfDOM(data);
+                const pdfEl = document.getElementById('pdfTemplate');
+                pdfEl.classList.remove('hidden');
+                const originalScrollY = window.scrollY;
+                window.scrollTo(0, 0);
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                const unloading1 = data.unloadingPlaces && data.unloadingPlaces.length > 0 ? data.unloadingPlaces[0].name : "宛先";
+                let dynamicFilename = unloading1 + '行';
+                if (data.projectName) dynamicFilename += '_' + data.projectName;
+                dynamicFilename += '.pdf';
+                
+                const opt = {
+                    margin:       0,
+                    filename:     dynamicFilename,
+                    image:        { type: 'jpeg', quality: 0.6 },
+                    html2canvas:  { scale: 1, useCORS: true, width: 1123, height: 794 },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+
+                const pdfBase64Uri = await html2pdf().set(opt).from(pdfEl).outputPdf('datauristring');
+                pdfEl.classList.add('hidden');
+                window.scrollTo(0, originalScrollY);
+                const b64Data = pdfBase64Uri.split(',')[1];
+
+                if (!currentRecordId) {
+                    currentRecordId = "REQ-" + new Date().getTime();
                 }
-            }, function (error) {
-                if (error) {
-                    console.error(error);
-                    showAlert('QRコードの生成に失敗しました: ' + error);
+
+                // 2. クラウドにPDFをアップロードしてURLを取得
+                const payload = {
+                    id: currentRecordId,
+                    data: data,
+                    pdfBase64: b64Data,
+                    action: 'savePdf'
+                };
+
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.success && result.pdfUrl) {
+                    // 3. 取得したURLでQRコードを生成
+                    const canvas = document.getElementById('qrcodeCanvas');
+                    
+                    QRCode.toCanvas(canvas, result.pdfUrl, {
+                        width: 220,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#ffffff'
+                        }
+                    }, function (error) {
+                        if (error) {
+                            console.error(error);
+                            document.getElementById('spinner').classList.add('hidden');
+                            showAlert('QRコードの生成に失敗しました: ' + error);
+                        } else {
+                            document.getElementById('spinner').classList.add('hidden');
+                            document.getElementById('qrModal').classList.remove('hidden');
+                        }
+                    });
                 } else {
-                    document.getElementById('overlay').classList.remove('hidden');
-                    document.getElementById('spinner').classList.add('hidden');
-                    document.getElementById('qrModal').classList.remove('hidden');
+                    throw new Error("URLの取得に失敗しました");
                 }
-            });
+            } catch (err) {
+                document.getElementById('overlay').classList.add('hidden');
+                document.getElementById('spinner').classList.add('hidden');
+                showAlert('エラー: PDFの準備に失敗しました。');
+                console.error(err);
+            }
         }
 
         // SMS送信

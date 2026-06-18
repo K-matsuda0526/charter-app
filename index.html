@@ -911,9 +911,9 @@
             return false;
         }
 
-        function getFormData() {
+        function getFormData(skipValidation = false) {
             const form = document.getElementById('charterForm');
-            if (!form.checkValidity()) {
+            if (!skipValidation && !form.checkValidity()) {
                 const firstInvalid = form.querySelector(':invalid');
                 if (firstInvalid) {
                     firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -933,7 +933,7 @@
                     .replace(/[ー−‐]/g, '-')
                     .replace(/\s/g, '');
                 
-                if (!/^[0-9\-]+$/.test(phoneEl.value)) {
+                if (!skipValidation && !/^[0-9\-]+$/.test(phoneEl.value)) {
                     showAlert('電話番号は数字とハイフンで入力してください。');
                     phoneEl.focus();
                     return null;
@@ -965,10 +965,10 @@
                 });
             });
 
-            if (loadingPlaces.length === 0) {
+            if (!skipValidation && loadingPlaces.length === 0) {
                 showAlert('積込み場所を1つ以上追加してください。', false); return null;
             }
-            if (unloadingPlaces.length === 0) {
+            if (!skipValidation && unloadingPlaces.length === 0) {
                 showAlert('荷下ろし場所を1つ以上追加してください。', false); return null;
             }
 
@@ -1222,7 +1222,7 @@
 
         // 印刷ダイアログが開く直前に、常に最新の入力データを依頼書テンプレートに反映させる
         window.addEventListener('beforeprint', () => {
-            const data = getFormData();
+            const data = getFormData(true);
             if (data) {
                 renderPdfTemplate(data);
             }

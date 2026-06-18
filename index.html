@@ -36,55 +36,36 @@
         }
 
         /* 印刷用レイアウト (@media print) */
-        #pdfTemplate {
-            width: 1122px;
-            height: 793px;
-        }
         @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
             body {
                 background: white;
-                color: black;
-                font-size: 12pt;
-                padding-bottom: 0 !important;
+                margin: 0;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            .no-print {
+            
+            /* アプリの入力フォームやヘッダーなどはすべて非表示にする */
+            header, form, #bottomNav, .fixed, #overlay, .no-print {
                 display: none !important;
             }
-            .section-card {
-                box-shadow: none;
-                border: 1px solid #000;
-                margin-bottom: 10px;
-                padding: 10px;
-                page-break-inside: avoid;
-            }
-            .input-field {
-                border: none;
-                border-bottom: 1px solid #666;
-                border-radius: 0;
-                padding: 2px 0;
-                margin-bottom: 4px;
-                background: transparent;
-                -webkit-appearance: none;
-                appearance: none;
-            }
-            textarea.input-field {
-                border: 1px solid #666;
-                height: auto !important;
-            }
-            .label-text {
-                font-size: 10pt;
-                margin-bottom: 0;
-            }
-            @page {
-                size: A4 portrait;
-                margin: 15mm;
-            }
-            .print-title {
+
+            /* 依頼書テンプレートだけをA4サイズで強制表示する */
+            #pdfTemplate {
                 display: block !important;
-                text-align: center;
-                font-size: 18pt;
-                font-weight: bold;
-                margin-bottom: 20px;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 1122px;
+                height: 793px;
+                margin: 0 auto;
+                transform-origin: top left;
+                transform: scale(0.95);
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -1235,61 +1216,18 @@
 
         // 印刷
         function handlePrint() {
-            const data = getFormData();
-            if(!data) return;
-            
-            renderPdfTemplate(data);
-
-            const pdfEl = document.getElementById('pdfTemplate');
-            
-            // 印刷用の新しいウィンドウを開く
-            const printWin = window.open('', '_blank', 'width=1200,height=800');
-            if(!printWin) {
-                showAlert("ポップアップがブロックされました。ブラウザの設定で許可してください。");
-                return;
-            }
-
-            // 現在の画面のスタイルシートをすべて取得
-            let styles = '';
-            document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
-                styles += el.outerHTML;
-            });
-
-            // 印刷用HTMLを構築
-            printWin.document.write(`
-                <!DOCTYPE html>
-                <html lang="ja">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>印刷 - チャーター便依頼書</title>
-                    ${styles}
-                    <style>
-                        /* 印刷専用のスタイル調整 */
-                        @media print {
-                            @page { size: A4 landscape; margin: 0; }
-                            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; background: white; }
-                            #pdfTemplate { width: 1122px; height: 793px; display: block !important; margin: 0 auto; transform-origin: top left; }
-                        }
-                        /* プレビュー画面用のスタイル */
-                        body { background: #f3f4f6; display: flex; justify-content: center; padding: 20px; }
-                        #pdfTemplate { display: block !important; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-                    </style>
-                </head>
-                <body>
-                    ${pdfEl.outerHTML}
-                    <scr` + `ipt>
-                        setTimeout(() => {
-                            document.getElementById('pdfTemplate').classList.remove('hidden');
-                            window.print();
-                        }, 800);
-                    </scr` + `ipt>
-                </body>
-                </html>
-            `);
-            printWin.document.close();
+            // ブラウザのネイティブ印刷ダイアログを安全に呼び出す
+            window.print();
         }
 
-        // QRコード表示
+        // 印刷ダイアログが開く直前に、常に最新の入力データを依頼書テンプレートに反映させる
+        window.addEventListener('beforeprint', () => {
+            const data = getFormData();
+            if (data) {
+                renderPdfTemplate(data);
+            }
+        });
+
         async function handleQR() {
             const data = getFormData();
             if (!data) return;

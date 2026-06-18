@@ -1277,12 +1277,12 @@
                 </head>
                 <body>
                     ${pdfEl.outerHTML}
-                    ${'<script>'}
+                    <scr` + `ipt>
                         setTimeout(() => {
                             document.getElementById('pdfTemplate').classList.remove('hidden');
                             window.print();
                         }, 800);
-                    ${'</script>'}
+                    </scr` + `ipt>
                 </body>
                 </html>
             `);

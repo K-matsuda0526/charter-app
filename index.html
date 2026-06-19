@@ -47,9 +47,6 @@
                 padding: 0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                width: 100vw;
-                height: 100vh;
-                position: relative;
             }
             
             /* アプリの入力フォームやヘッダーなどはすべて非表示にする */
@@ -60,15 +57,14 @@
             /* 依頼書テンプレートだけをA4サイズで強制表示する */
             #pdfTemplate {
                 display: block !important;
-                position: absolute;
-                top: 50%;
-                left: 50%;
+                position: relative;
                 width: 1122px;
                 height: 793px;
                 margin: 0;
-                transform-origin: center center;
-                transform: translate(-50%, -50%) scale(0.94);
+                transform-origin: top left;
+                transform: translate(34px, 24px) scale(0.94);
                 page-break-inside: avoid;
+                page-break-after: avoid;
             }
         }
     </style>

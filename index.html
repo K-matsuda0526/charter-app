@@ -47,9 +47,9 @@
                 padding: 0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+                width: 100vw;
+                height: 100vh;
+                position: relative;
             }
             
             /* アプリの入力フォームやヘッダーなどはすべて非表示にする */
@@ -60,12 +60,14 @@
             /* 依頼書テンプレートだけをA4サイズで強制表示する */
             #pdfTemplate {
                 display: block !important;
-                position: relative; /* absoluteを解除 */
+                position: absolute;
+                top: 50%;
+                left: 50%;
                 width: 1122px;
                 height: 793px;
-                margin: 0 auto; /* 左右中央揃え */
-                transform-origin: center center; /* 中心を基準に縮小 */
-                transform: scale(0.94); /* 少し縮小して余白を確保 */
+                margin: 0;
+                transform-origin: center center;
+                transform: translate(-50%, -50%) scale(0.94);
                 page-break-inside: avoid;
             }
         }

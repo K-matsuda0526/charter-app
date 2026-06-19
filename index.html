@@ -47,6 +47,9 @@
                 padding: 0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
             
             /* アプリの入力フォームやヘッダーなどはすべて非表示にする */
@@ -57,14 +60,12 @@
             /* 依頼書テンプレートだけをA4サイズで強制表示する */
             #pdfTemplate {
                 display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
+                position: relative; /* absoluteを解除 */
                 width: 1122px;
                 height: 793px;
-                margin: 0 auto;
-                transform-origin: top left;
-                transform: scale(0.95);
+                margin: 0 auto; /* 左右中央揃え */
+                transform-origin: center center; /* 中心を基準に縮小 */
+                transform: scale(0.94); /* 少し縮小して余白を確保 */
                 page-break-inside: avoid;
             }
         }
@@ -95,7 +96,25 @@
     <div class="hidden print-title mt-4">チャーター便依頼書・伝票</div>
 
     <main class="max-w-3xl mx-auto p-4 mt-4">
-        <form id="charterForm" novalidate>
+        
+          <div id="editModeNotice" class="hidden bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-3 sm:p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center rounded shadow-sm gap-3">
+              <div>
+                  <p class="font-bold text-sm sm:text-base flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
+                      過去の依頼を編集中
+                  </p>
+                  <p class="text-xs sm:text-sm mt-1 text-yellow-700">データを修正後は、一番下の「保存」を押して上書きしてください。</p>
+              </div>
+              <button type="button" onclick="cancelEdit()" class="bg-white hover:bg-gray-100 text-yellow-700 border border-yellow-300 font-bold py-2 px-4 rounded-full text-xs sm:text-sm shadow-sm transition-colors whitespace-nowrap flex items-center gap-1 w-full sm:w-auto justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  編集をキャンセル
+              </button>
+          </div>
+          <form id="charterForm" novalidate>
             
             <!-- 1. 基本情報 -->
             <section class="section-card">
@@ -556,6 +575,12 @@
             disableMobile: "true" // モバイルでも綺麗な専用UIで統一
         };
 
+        function cancelEdit() {
+            clearForm();
+            showAlert('編集をキャンセルし、新規作成モードに戻りました。', true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function removeLocationCard(id, type, masterKey) {
             const el = document.getElementById(id);
             if (el) el.remove();
@@ -884,6 +909,7 @@
 
                     window.originalRecordData = parsedData;
                     restoreFormData(parsedData);
+                    document.getElementById('editModeNotice').classList.remove('hidden');
                     closeDashboard();
                     showAlert('データを読み込みました！', true);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1128,6 +1154,11 @@
         function clearForm() {
             window.originalRecordData = null;
             document.getElementById('charterForm').reset();
+            const editNotice = document.getElementById('editModeNotice');
+            if(editNotice) editNotice.classList.add('hidden');
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('id');
+            window.history.replaceState({path: newUrl.href}, '', newUrl.href);
             
             // Custom elements reset
             const loadContainer = document.getElementById('loadingLocationsContainer');

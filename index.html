@@ -1156,9 +1156,7 @@
             document.getElementById('charterForm').reset();
             const editNotice = document.getElementById('editModeNotice');
             if(editNotice) editNotice.classList.add('hidden');
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('id');
-            window.history.replaceState({path: newUrl.href}, '', newUrl.href);
+
             
             // Custom elements reset
             const loadContainer = document.getElementById('loadingLocationsContainer');

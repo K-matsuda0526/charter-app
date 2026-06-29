@@ -556,6 +556,22 @@
 
     <script>
         window.isDirty = false;
+        window.isDriverShared = false;
+        window.initialDriverPhone = '';
+        window.initialDriverName = '';
+        
+        window.checkUnsharedDriver = function() {
+            const currentPhone = document.getElementById('driverPhone').value.trim();
+            const currentName = document.getElementById('driverName').value.trim();
+            const phoneChanged = currentPhone !== window.initialDriverPhone;
+            const nameChanged = currentName !== window.initialDriverName;
+            const driverChanged = phoneChanged || nameChanged;
+            
+            if (driverChanged && !window.isDriverShared && (currentPhone || currentName)) {
+                return confirm("⚠️ ドライバー情報が追加・変更されていますが、ドライバーへの共有（SMS/QR/印刷）が行われていません。\n\nこのまま保存して終了しますか？");
+            }
+            return true;
+        };
         window.addEventListener('beforeunload', (e) => {
             if (window.isDirty) {
                 e.preventDefault();
@@ -928,6 +944,15 @@
                     window.history.pushState({path: newUrl.href}, '', newUrl.href);
 
                     window.originalRecordData = parsedData;
+                      window.isDriverShared = false;
+                      window.initialDriverPhone = parsedData.driverPhone || '';
+                      window.initialDriverName = parsedData.driverName || '';
+                      const saveBtnTitle = document.getElementById('saveBtnTitle');
+                      const saveBtnDesc1 = document.getElementById('saveBtnDesc1');
+                      const saveBtnDesc2 = document.getElementById('saveBtnDesc2');
+                      if(saveBtnTitle) saveBtnTitle.innerText = "上書き保存して閉じる";
+                      if(saveBtnDesc1) saveBtnDesc1.innerText = "※メール等での通知は行われず、データのみ静かに更新されます。";
+                      if(saveBtnDesc2) saveBtnDesc2.innerText = "";
                     restoreFormData(parsedData);
                     document.getElementById('editModeNotice').classList.remove('hidden');
                     
@@ -1115,7 +1140,8 @@
 
         // メール送信（PDF生成 + Share APIによるモバイル送信 または PC向けEML送信）
         async function handleEmail() {
-            const data = getFormData();
+              if(!window.checkUnsharedDriver()) return;
+              const data = getFormData();
             if (!data) return;
 
             showSpinner('依頼書のPDFを作成し、メールを準備しています...');
@@ -1176,6 +1202,15 @@
         function clearForm() {
             window.isDirty = false;
             window.originalRecordData = null;
+              window.isDriverShared = false;
+              window.initialDriverPhone = '';
+              window.initialDriverName = '';
+              const saveBtnTitle = document.getElementById('saveBtnTitle');
+              const saveBtnDesc1 = document.getElementById('saveBtnDesc1');
+              const saveBtnDesc2 = document.getElementById('saveBtnDesc2');
+              if(saveBtnTitle) saveBtnTitle.innerText = "依頼を確定 (保存 ＆ 自動メール送信)";
+              if(saveBtnDesc1) saveBtnDesc1.innerText = "※次の新しい依頼を入力する状態に戻ります。";
+              if(saveBtnDesc2) saveBtnDesc2.innerText = "※初回保存時に、指定した依頼会社へ自動でメールが送信されます。";
             document.getElementById('charterForm').reset();
             const editNotice = document.getElementById('editModeNotice');
             
@@ -1206,7 +1241,8 @@
         }
 
         async function handleSave() {
-            const data = getFormData();
+              if(!window.checkUnsharedDriver()) return;
+              const data = getFormData();
             if (!data) return;
 
             showSpinner('依頼書データを作成中...');
@@ -1319,6 +1355,7 @@
                     window.isDirty = false;
                     document.getElementById('overlay').classList.add('hidden');
                     document.getElementById('spinner').classList.add('hidden');
+                    window.isDriverShared = true;
                     showAlert('✅ 最新の入力内容が自動で上書き保存されました', true);
                     
                     // 印刷ダイアログを開く
@@ -1399,6 +1436,7 @@
                 
                 if (result.success && result.pdfUrl) {
                     window.isDirty = false;
+                    window.isDriverShared = true;
                     showAlert('✅ 最新の入力内容が自動で上書き保存されました', true);
                     // 3. 取得したURLでQRコードを生成
                     const canvas = document.getElementById('qrcodeCanvas');

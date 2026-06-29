@@ -722,7 +722,7 @@
         function showAlert(msg, isSuccess = false) {
             const toast = document.getElementById('alertToast');
             const alertMsg = document.getElementById('alertMsg');
-            toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity ${isSuccess ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-[9999] transition-opacity ${isSuccess ? 'bg-green-500' : 'bg-red-500'} text-white`;
             alertMsg.textContent = msg;
             toast.classList.remove('hidden');
             setTimeout(() => {

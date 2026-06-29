@@ -1140,6 +1140,10 @@
 
         // メール送信（PDF生成 + Share APIによるモバイル送信 または PC向けEML送信）
         async function handleEmail() {
+              if (!window.isDirty) {
+                  showAlert('⚠️ 内容が変更されていないため、メール再依頼は不要です', false);
+                  return;
+              }
               if(!window.checkUnsharedDriver()) return;
               const data = getFormData();
             if (!data) return;
@@ -1241,6 +1245,10 @@
         }
 
         async function handleSave() {
+              if (currentRecordId && !window.isDirty) {
+                  showAlert('⚠️ 内容が変更されていないため、上書き保存は不要です', false);
+                  return;
+              }
               if(!window.checkUnsharedDriver()) return;
               const data = getFormData();
             if (!data) return;

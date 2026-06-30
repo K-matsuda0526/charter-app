@@ -479,16 +479,25 @@
                 依頼一覧
             </h2>
             
-            <div class="flex flex-col md:flex-row gap-4 mb-6">
-                <div class="flex-1 relative">
-                    <input type="text" id="searchInput" class="input-field pl-10 w-full" placeholder="フリーワード検索（会社名、物件名、日付など）" onkeydown="if(event.key === 'Enter') loadRequestList()">
-                </div>
-                <div class="flex items-center gap-2 bg-slate-50 px-4 rounded-xl border border-slate-200">
-                    <input type="checkbox" id="unassignedFilter" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" onchange="loadRequestList()">
-                    <label for="unassignedFilter" class="font-medium text-slate-700 whitespace-nowrap cursor-pointer select-none">未定のみ</label>
-                </div>
-                <button onclick="loadRequestList()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-xl transition-colors whitespace-nowrap shadow-md">検索</button>
-            </div>
+            <div class="flex flex-col md:flex-row gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
+              <div class="flex-1 relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  </div>
+                  <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow text-sm" placeholder="会社名・荷下ろし先などで検索..." onkeydown="if(event.key === 'Enter') loadRequestList()">
+              </div>
+              <div class="relative w-full md:w-48">
+                  <input type="month" id="monthFilter" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow text-sm text-slate-700 font-medium cursor-pointer" onchange="loadRequestList()">
+              </div>
+              <div class="relative w-full md:w-48">
+                  <select id="driverStatusFilter" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow text-sm text-slate-700 font-medium cursor-pointer bg-white" onchange="loadRequestList()">
+                      <option value="all">ドライバー: 全て</option>
+                      <option value="unassigned">未手配のみ</option>
+                      <option value="assigned">手配済のみ</option>
+                  </select>
+              </div>
+              <button onclick="loadRequestList()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-2 px-6 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap">絞り込み</button>
+          </div>
 
             <div class="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 relative">
                 <table class="w-full text-left text-sm text-slate-600 whitespace-nowrap">
@@ -800,7 +809,8 @@
 
         async function loadRequestList() {
             const keyword = document.getElementById('searchInput').value;
-            const unassignedOnly = document.getElementById('unassignedFilter').checked;
+            const driverStatus = document.getElementById('driverStatusFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
             const spinner = document.getElementById('dashboardSpinner');
             const tbody = document.getElementById('requestListBody');
 
@@ -811,35 +821,103 @@
                 const url = new URL(GAS_WEB_APP_URL);
                 url.searchParams.append('action', 'list');
                 if (keyword) url.searchParams.append('keyword', keyword);
-                if (unassignedOnly) url.searchParams.append('unassignedOnly', 'true');
 
                 const response = await fetch(url.toString());
                 const data = await response.json();
-                currentListData = data;
+                currentListData = data; // 元データは保持
 
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500">条件に一致する依頼が見つかりませんでした</td></tr>';
+                // 1. JSON解析と積込予定日の抽出
+                let processedData = data.map(item => {
+                    let parsedDate = '';
+                    let parsedDateObj = new Date(0);
+                    try {
+                        if (item.jsonData) {
+                            const parsed = JSON.parse(item.jsonData);
+                            if (parsed.loadingPlaces && parsed.loadingPlaces.length > 0) {
+                                parsedDate = parsed.loadingPlaces[0].datetime; // "Y/m/d H:i"
+                                if (parsedDate) {
+                                    parsedDateObj = new Date(parsedDate);
+                                }
+                            }
+                        }
+                    } catch(e) {}
+                    
+                    return {
+                        ...item,
+                        loadingDateStr: parsedDate || '未設定',
+                        loadingDateObj: parsedDateObj,
+                        isUnassigned: item.driverName === '未定' || !item.driverName
+                    };
+                });
+
+                // 2. ドライバー手配状況で絞り込み
+                if (driverStatus === 'unassigned') {
+                    processedData = processedData.filter(item => item.isUnassigned);
+                } else if (driverStatus === 'assigned') {
+                    processedData = processedData.filter(item => !item.isUnassigned);
+                }
+
+                // 3. 月別で絞り込み (例: "2026-07")
+                if (monthFilter) {
+                    const [filterYear, filterMonth] = monthFilter.split('-');
+                    processedData = processedData.filter(item => {
+                        if (!item.loadingDateStr || item.loadingDateStr === '未設定') return false;
+                        const itemYear = item.loadingDateObj.getFullYear();
+                        const itemMonth = String(item.loadingDateObj.getMonth() + 1).padStart(2, '0');
+                        return String(itemYear) === filterYear && itemMonth === filterMonth;
+                    });
+                }
+
+                // 4. 積込日時でソート (降順: 新しいものが上)
+                processedData.sort((a, b) => b.loadingDateObj - a.loadingDateObj);
+
+                // 5. 描画処理
+                const todayTime = new Date();
+                todayTime.setHours(0,0,0,0);
+
+                if (processedData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500 font-medium bg-slate-50/50">条件に一致する依頼が見つかりませんでした</td></tr>';
                 } else {
-                    data.forEach(item => {
+                    processedData.forEach(item => {
                         const tr = document.createElement('tr');
-                        tr.className = 'hover:bg-blue-50 transition-colors cursor-pointer';
                         tr.onclick = () => loadRecordFromList(item.id);
                         
-                        const isUnassigned = item.driverName === '未定' || !item.driverName;
-                        const driverBadge = isUnassigned 
-                            ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded-md text-xs font-bold border border-red-200">未定</span>'
-                            : `<span class="text-slate-700">${item.driverName}</span>`;
+                        // 日付ベースのスタイリング
+                        let rowClass = 'hover:bg-blue-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0 ';
+                        let dateBadgeClass = 'text-slate-700 font-bold';
+                        
+                        if (item.loadingDateObj.getTime() > 0) {
+                            const itemDay = new Date(item.loadingDateObj);
+                            itemDay.setHours(0,0,0,0);
+                            
+                            if (itemDay.getTime() === todayTime.getTime()) {
+                                // 本日
+                                rowClass += 'bg-yellow-50/60 hover:bg-yellow-100/60 ';
+                                dateBadgeClass = 'text-amber-600 font-extrabold flex items-center gap-1';
+                                item.loadingDateStr = '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>' + item.loadingDateStr;
+                            } else if (itemDay.getTime() < todayTime.getTime()) {
+                                // 過去
+                                rowClass += 'opacity-60 bg-slate-50/30 ';
+                                dateBadgeClass = 'text-slate-400 font-normal';
+                            }
+                        }
+
+                        tr.className = rowClass;
+                        
+                        const driverBadge = item.isUnassigned 
+                            ? '<span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-md text-xs font-bold border border-red-200 shadow-sm">未手配</span>'
+                            : `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-200 shadow-sm">${item.driverName}</span>`;
 
                         tr.innerHTML = `
-                            <td class="px-4 py-3 whitespace-nowrap text-xs">${item.date}</td>
-                            <td class="px-4 py-3 font-medium text-slate-800">${item.company || '-'}</td>
-                            <td class="px-4 py-3 hidden md:table-cell truncate max-w-[150px]">${item.unloading || '-'}</td>
-                            <td class="px-4 py-3">${driverBadge}</td>
-                            <td class="px-4 py-3 text-center space-x-2">
-                                <button type="button" onclick="event.stopPropagation(); previewImage('${item.id}')" class="bg-slate-100 hover:bg-green-100 text-green-600 px-3 py-1 rounded-lg text-sm transition-colors border border-slate-200 hover:border-green-300">
+                            <td class="px-4 py-3.5 whitespace-nowrap text-sm ${dateBadgeClass}">${item.loadingDateStr}</td>
+                            <td class="px-4 py-3.5 font-bold text-slate-800">${item.company || '-'}</td>
+                            <td class="px-4 py-3.5 hidden md:table-cell truncate max-w-[150px] text-slate-600">${item.unloading || '-'}</td>
+                            <td class="px-4 py-3.5">${driverBadge}</td>
+                            <td class="px-4 py-3.5 text-center space-x-2">
+                                <button type="button" onclick="event.stopPropagation(); previewImage('${item.id}')" class="bg-white hover:bg-green-50 text-green-600 px-3 py-1.5 rounded-lg text-sm transition-all border border-green-200 hover:border-green-400 shadow-sm hover:shadow active:scale-95 font-medium">
                                     依頼書確認
                                 </button>
-                                <button type="button" class="bg-slate-100 hover:bg-blue-100 text-blue-600 px-3 py-1 rounded-lg text-sm transition-colors border border-slate-200 hover:border-blue-300">
+                                <button type="button" class="bg-white hover:bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-sm transition-all border border-blue-200 hover:border-blue-400 shadow-sm hover:shadow active:scale-95 font-medium">
                                     編集
                                 </button>
                             </td>

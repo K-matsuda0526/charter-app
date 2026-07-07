@@ -502,16 +502,17 @@
             <div class="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 relative">
                 <table class="w-full text-left text-sm text-slate-600 whitespace-nowrap">
                     <thead class="bg-slate-200/50 sticky top-0">
-                        <tr>
-                            <th class="px-4 py-3 font-semibold">作成日時</th>
-                            <th class="px-4 py-3 font-semibold">会社名</th>
-                            <th class="px-4 py-3 font-semibold hidden md:table-cell">荷下ろし先</th>
-                            <th class="px-4 py-3 font-semibold">ドライバー</th>
-                            <th class="px-4 py-3 font-semibold text-center">操作</th>
-                        </tr>
-                    </thead>
+                          <tr>
+                              <th class="px-4 py-3 font-semibold">依頼日時</th>
+                              <th class="px-4 py-3 font-semibold text-amber-700">積込予定</th>
+                              <th class="px-4 py-3 font-semibold">会社名</th>
+                              <th class="px-4 py-3 font-semibold hidden md:table-cell">荷下ろし先</th>
+                              <th class="px-4 py-3 font-semibold">ドライバー</th>
+                              <th class="px-4 py-3 font-semibold text-center">操作</th>
+                          </tr>
+                      </thead>
                     <tbody id="requestListBody" class="divide-y divide-slate-200">
-                        <tr><td colspan="5" class="text-center py-8 text-slate-500">検索ボタンを押してデータを読み込んでください</td></tr>
+                        <tr><td colspan="6" class="text-center py-8 text-slate-500">検索ボタンを押してデータを読み込んでください</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -876,7 +877,7 @@
                 todayTime.setHours(0,0,0,0);
 
                 if (processedData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500 font-medium bg-slate-50/50">条件に一致する依頼が見つかりませんでした</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-500 font-medium bg-slate-50/50">条件に一致する依頼が見つかりませんでした</td></tr>';
                 } else {
                     processedData.forEach(item => {
                         const tr = document.createElement('tr');
@@ -927,7 +928,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">エラーが発生しました: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500">エラーが発生しました: ${err.message}</td></tr>`;
             } finally {
                 spinner.classList.add('hidden');
             }

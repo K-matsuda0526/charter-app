@@ -458,10 +458,14 @@
         <!-- 最終確認エリア -->
         <div class="border-t-2 border-dashed border-gray-300 pt-8 pb-6 text-center">
             <p class="text-gray-700 text-lg font-bold mb-4">👆 ドライバーさんへ情報の共有は完了しましたか？</p>
-            <button type="button" onclick="handleSave()" class="w-full sm:w-3/4 mx-auto bg-slate-800 hover:bg-slate-900 text-white rounded-2xl py-4 px-4 flex flex-col items-center justify-center shadow-xl transition-transform hover:scale-[1.02] active:scale-[0.98] border-b-4 border-slate-950">
+            <button type="button" onclick="handleSave()" class="w-full sm:w-3/4 mx-auto bg-slate-800 hover:bg-slate-900 text-white rounded-2xl py-4 px-4 flex flex-col items-center justify-center shadow-xl transition-transform hover:scale-[1.02] active:scale-[0.98] border-b-4 border-slate-950 mb-4">
                 <span id="saveBtnTitle" class="text-xl font-bold tracking-wider">依頼を確定 (保存 ＆ 自動メール送信)</span>
                   <span id="saveBtnDesc1" class="text-xs text-slate-300 mt-1">※次の新しい依頼を入力する状態に戻ります。</span>
                   <span id="saveBtnDesc2" class="text-[10px] text-slate-400 mt-1">※初回保存時に、指定した依頼会社へ自動でメールが送信されます。</span>
+            </button>
+            <button type="button" id="cancelRequestBtn" onclick="handleCancel()" class="w-full sm:w-3/4 mx-auto bg-white hover:bg-red-50 text-red-600 rounded-2xl py-3 px-4 flex flex-row items-center justify-center shadow-sm border-2 border-red-200 transition-colors hidden">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span class="text-sm font-bold tracking-wider">この依頼をキャンセルする（一覧から削除）</span>
             </button>
         </div>
     </div>
@@ -824,7 +828,19 @@
                 if (keyword) url.searchParams.append('keyword', keyword);
 
                 const response = await fetch(url.toString());
-                const data = await response.json();
+                let data = await response.json();
+                
+                // ★追加: キャンセル済みのデータを除外する
+                data = data.filter(item => {
+                    try {
+                        if (item.jsonData) {
+                            const parsed = JSON.parse(item.jsonData);
+                            if (parsed.status === 'canceled') return false;
+                        }
+                    } catch(e) {}
+                    return true;
+                });
+                
                 currentListData = data; // 元データは保持
 
                 // 1. JSON解析と積込予定日の抽出
@@ -1036,8 +1052,12 @@
                       if(saveBtnTitle) saveBtnTitle.innerText = "上書き保存して閉じる";
                       if(saveBtnDesc1) saveBtnDesc1.innerText = "※メール等での通知は行われず、データのみ静かに更新されます。";
                       if(saveBtnDesc2) saveBtnDesc2.innerText = "";
+                      const cancelBtn = document.getElementById('cancelRequestBtn');
+                      if(cancelBtn) cancelBtn.classList.remove('hidden');
                     restoreFormData(parsedData);
                     document.getElementById('editModeNotice').classList.remove('hidden');
+                const cancelBtn = document.getElementById('cancelRequestBtn');
+                if(cancelBtn) cancelBtn.classList.remove('hidden');
                     
                     closeDashboard();
                     showAlert('データを読み込みました！', true);
@@ -1325,6 +1345,37 @@
             
             // Reset company and PIC UI
             handleCompanyChange();
+        }
+
+        async function handleCancel() {
+            if (!currentRecordId) return;
+            if (!confirm("本当にこの依頼をキャンセル（一覧から削除）しますか？\n※復元できません。")) return;
+            
+            showSpinner('キャンセル処理中...');
+            try {
+                const res = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'cancel',
+                        id: currentRecordId
+                    })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    hideSpinner();
+                    showAlert('依頼をキャンセルしました', true);
+                    clearForm(); // フォームをリセットし新規モードへ
+                    if (!document.getElementById('dashboardModal').classList.contains('hidden')) {
+                        loadRequestList(); // ダッシュボードが開いていれば更新
+                    }
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                hideSpinner();
+                console.error(error);
+                showAlert('エラー: ' + error.message, false);
+            }
         }
 
         async function handleSave() {

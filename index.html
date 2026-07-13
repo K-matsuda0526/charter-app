@@ -85,7 +85,11 @@
     <!-- ヘッダー -->
     <header class="bg-blue-800 text-white p-3 sm:p-4 sticky top-0 z-10 shadow-md no-print flex justify-between items-center gap-2">
         <h1 class="text-lg sm:text-xl font-bold flex-1 truncate">チャーター便依頼書</h1>
-        <div class="flex-none flex justify-end">
+        <div class="flex-none flex justify-end gap-2">
+            <button type="button" onclick="handleLogout()" class="bg-white/20 hover:bg-white/30 text-white font-semibold py-1.5 px-3 rounded-full transition-all text-sm border border-white/30 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <span class="hidden sm:inline">ログアウト</span>
+            </button>
             <button type="button" onclick="openDashboard()" class="bg-white/20 hover:bg-white/30 text-white font-semibold py-1.5 px-4 rounded-full transition-all text-sm border border-white/30 flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 依頼一覧
@@ -645,7 +649,7 @@
             try {
                 const res = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'login', email: email, password: pass })
+                    body: JSON.stringify({ action: 'login', email: email, password: pass, userAgent: navigator.userAgent })
                 });
                 const result = await res.json();
                 

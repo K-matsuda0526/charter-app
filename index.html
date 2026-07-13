@@ -482,6 +482,21 @@
 
     <!-- モーダル・オーバーレイ共通 -->
 
+    <!-- 端末登録確認モーダル -->
+    <div id="deviceConfirmModal" class="fixed inset-0 bg-slate-900/80 z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative text-center">
+            <div class="bg-yellow-100 text-yellow-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">端末情報の登録</h3>
+            <p class="text-slate-600 text-sm mb-6 leading-relaxed">新しい端末からのログインです。<br>この端末情報を登録しますか？</p>
+            <div class="flex gap-3">
+                <button type="button" onclick="cancelDeviceRegistration()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl py-3 transition-colors">キャンセル</button>
+                <button type="button" onclick="confirmDeviceRegistration()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl py-3 shadow-md transition-colors">登録</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ログインモーダル -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900 z-[200] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
@@ -652,10 +667,49 @@
             btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>';
             btn.disabled = true;
 
+            // 端末IDの確認と生成
+            let deviceId = localStorage.getItem('charter_device_id');
+            if (!deviceId) {
+                document.getElementById('deviceConfirmModal').classList.remove('hidden');
+                document.getElementById('deviceConfirmModal').classList.add('flex');
+                btn.innerHTML = 'ログインする';
+                btn.disabled = false;
+                return;
+            }
+            
+            await executeLogin(email, pass, deviceId, btn, err);
+        }
+
+        function cancelDeviceRegistration() {
+            document.getElementById('deviceConfirmModal').classList.add('hidden');
+            document.getElementById('deviceConfirmModal').classList.remove('flex');
+        }
+
+        function confirmDeviceRegistration() {
+            document.getElementById('deviceConfirmModal').classList.add('hidden');
+            document.getElementById('deviceConfirmModal').classList.remove('flex');
+            
+            const deviceId = 'TK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            localStorage.setItem('charter_device_id', deviceId);
+            
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            
+            btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>';
+            btn.disabled = true;
+            
+            executeLogin(email, pass, deviceId, btn, err);
+        }
+
+        async function executeLogin(email, pass, deviceId, btn, err) {
+            const deviceInfo = "[ID: " + deviceId + "] " + navigator.userAgent;
+
             try {
                 const res = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'login', email: email, password: pass, userAgent: navigator.userAgent })
+                    body: JSON.stringify({ action: 'login', email: email, password: pass, userAgent: deviceInfo })
                 });
                 const result = await res.json();
                 

@@ -471,6 +471,34 @@
     </div>
 
     <!-- モーダル・オーバーレイ共通 -->
+
+    <!-- ログインモーダル -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900 z-[200] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
+            <div class="text-center mb-8">
+                <div class="bg-blue-100 text-blue-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">ログイン</h2>
+                <p class="text-slate-500 mt-2 text-sm">システムを利用するための情報を入力してください</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">メールアドレス (ID)</label>
+                    <input type="email" id="loginEmail" required placeholder="example@gmail.com" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">パスワード</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl py-3 shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] flex justify-center items-center">
+                    ログインする
+                </button>
+                <div id="loginError" class="text-red-500 text-sm font-bold text-center hidden"></div>
+            </form>
+        </div>
+    </div>
     
     <!-- ダッシュボードモーダル -->
     <div id="dashboardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4 transition-opacity duration-300 opacity-0">
@@ -478,10 +506,16 @@
             <button onclick="closeDashboard()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
-            <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                依頼一覧
-            </h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    依頼一覧
+                </h2>
+                <button onclick="handleLogout()" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1 rounded-lg transition-colors border border-slate-300 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    ログアウト
+                </button>
+            </div>
             
             <div class="flex flex-col md:flex-row gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
               <div class="flex-1 relative">
@@ -574,6 +608,83 @@
         window.initialDriverPhone = '';
         window.initialDriverName = '';
         
+        let currentUserRole = 'admin';
+
+        // 初期化時にログインチェック
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+        });
+
+        function checkLoginStatus() {
+            const token = localStorage.getItem('charter_auth_token');
+            if (token) {
+                try {
+                    const data = JSON.parse(token);
+                    currentUserRole = data.role;
+                    document.getElementById('loginModal').classList.add('hidden');
+                    applyRoleRestrictions();
+                } catch(e) {
+                    document.getElementById('loginModal').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            
+            err.classList.add('hidden');
+            btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', email: email, password: pass })
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    localStorage.setItem('charter_auth_token', JSON.stringify({ email: email, role: result.role }));
+                    currentUserRole = result.role;
+                    document.getElementById('loginModal').classList.add('hidden');
+                    applyRoleRestrictions();
+                } else {
+                    err.innerText = result.error || "ログインに失敗しました";
+                    err.classList.remove('hidden');
+                }
+            } catch(error) {
+                err.innerText = "通信エラーが発生しました";
+                err.classList.remove('hidden');
+            } finally {
+                btn.innerHTML = 'ログインする';
+                btn.disabled = false;
+            }
+        }
+
+        function handleLogout() {
+            if(confirm("ログアウトしますか？")) {
+                localStorage.removeItem('charter_auth_token');
+                location.reload();
+            }
+        }
+
+        function applyRoleRestrictions() {
+            const dashCloseBtn = document.querySelector('button[onclick="closeDashboard()"]');
+            if (currentUserRole === 'staff') {
+                if(dashCloseBtn) dashCloseBtn.classList.add('hidden');
+                // 一般社員は強制的にダッシュボードを開き、閉じさせない
+                openDashboard();
+            } else {
+                if(dashCloseBtn) dashCloseBtn.classList.remove('hidden');
+            }
+        }
+        
         window.checkUnsharedDriver = function() {
             const currentPhone = document.getElementById('driverPhone').value.trim();
             const currentName = document.getElementById('driverName').value.trim();
@@ -630,6 +741,7 @@
             showAlert('編集をキャンセルし、新規作成モードに戻りました。', true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+            if (currentUserRole === 'staff') openDashboard();
 
         function removeLocationCard(id, type, masterKey) {
             const el = document.getElementById(id);
@@ -1363,7 +1475,9 @@
                     hideSpinner();
                     showAlert('依頼をキャンセルしました', true);
                     clearForm(); // フォームをリセットし新規モードへ
-                    if (!document.getElementById('dashboardModal').classList.contains('hidden')) {
+                    if (currentUserRole === 'staff') {
+                        openDashboard();
+                    } else if (!document.getElementById('dashboardModal').classList.contains('hidden')) {
                         loadRequestList(); // ダッシュボードが開いていれば更新
                     }
                 } else {
@@ -1434,6 +1548,7 @@
                 window.isDirty = false;
                   showAlert('保存処理を受け付けました！', true);
                 clearForm();
+                  if (currentUserRole === 'staff') openDashboard();
 
             } catch (err) {
                 console.error(err);

@@ -159,13 +159,6 @@
                         <option value="千葉">千葉</option>
                         <option value="小林">小林</option>
                     </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="label-text block mb-1">積込日時</label>
-                    <input type="datetime-local" id="loadingDateTime" name="loadingDateTime" class="input-field w-full">
-                </div>
-
                 <div class="mb-4">
                     <label class="label-text">物件名</label>
                     <input type="text" id="projectName" name="projectName" class="input-field w-full" placeholder="（任意）">
@@ -1138,7 +1131,7 @@
             
             // Set simple fields
             const fields = [
-                'company', 'picNameOur', 'loadingDateTime', 'projectName', 'vehicle', 'vehicleCount', 'cargoContent', 
+                'company', 'picNameOur', 'projectName', 'vehicle', 'vehicleCount', 'cargoContent', 
                 'cargoH', 'cargoW', 'cargoL', 'cargoWeight', 
                 'blankets', 'buffers', 'notes', 'picName', 'picPhone', 
                 'driverName', 'driverPhone'
@@ -1253,7 +1246,7 @@
         function checkSignificantChange(oldData, newData) {
             if (!oldData) return true; // 新規は常に送信
             const targetFields = [
-                'company', 'picNameOur', 'picNameClient', 'loadingDateTime', 'projectName', 'vehicle', 'vehicleCount', 
+                'company', 'picNameOur', 'picNameClient', 'projectName', 'vehicle', 'vehicleCount', 
                 'cargoContent', 'cargoH', 'cargoW', 'cargoL', 'cargoWeight', 'blankets', 'buffers', 'notes'
             ];
             for (let field of targetFields) {
@@ -1331,7 +1324,6 @@
                 company: document.getElementById('company') ? document.getElementById('company').value : '',
                 picNameClient: document.getElementById('picNameClientSelect') ? (document.getElementById('picNameClientSelect').value === 'custom' ? document.getElementById('picNameClientInput').value : document.getElementById('picNameClientSelect').value) : '',
                 picNameOur: document.getElementById('picNameOur') ? document.getElementById('picNameOur').value : '',
-                loadingDateTime: document.getElementById('loadingDateTime') ? document.getElementById('loadingDateTime').value : '',
                 projectName: document.getElementById('projectName') ? document.getElementById('projectName').value : '',
                 vehicle: document.getElementById('vehicle') ? document.getElementById('vehicle').value : '',
                 vehicleCount: document.getElementById('vehicleCount') ? document.getElementById('vehicleCount').value : '',
